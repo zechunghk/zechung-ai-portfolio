@@ -78,6 +78,16 @@ const cases = {
   }
 };
 
+cases.sound = {
+  category: '07 / 聲音與音樂', title: '動物風格 Jingle Bells',
+  subtitle: '用熟悉的旋律，探索兩種想像中的角色音色。', status: '可試聽成品 · 熊貓與長頸鹿',
+  media: '<div class="case-audio-grid"><figure><figcaption>熊貓版 <span>02:00</span></figcaption><audio controls preload="none" src="assets/panda-jingle-bells.mp3" aria-label="項目詳解：熊貓版 Jingle Bells"></audio></figure><figure><figcaption>長頸鹿版 <span>02:00</span></figcaption><audio controls preload="none" src="assets/giraffe-jingle-bells.mp3" aria-label="項目詳解：長頸鹿版 Jingle Bells"></audio></figure></div><p class="case-caption">兩款均為想像的合成角色音色，並非真實動物錄音。旋律取自傳統公版歌曲《Jingle Bells》。</p>',
+  sections: [['起點', '如果把熟悉的旋律交給不同的動物角色，聽起來會有甚麼不同？我想用聲音合成與程式，做出柔和、輕快而又容易比較的版本。']],
+  limit: '此處展示熊貓與長頸鹿兩款合成版本，沒有清晰歌詞。其他聲音版本的素材來源與授權說明見公開程式庫。',
+  repository: { name: 'animal-jingle-bells-preview-20261110', public: true },
+  link: 'https://github.com/zechunghk/animal-jingle-bells-preview-20261110', linkText: '查看完整聲音實驗'
+};
+
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 githubProjects.forEach((project) => {
@@ -90,6 +100,8 @@ githubProjects.forEach((project) => {
   }
   cases[project.id] = study;
 });
+
+const caseOrder = Object.keys(projectDetails).filter((id) => Object.hasOwn(cases, id));
 
 document.querySelector('#repo-grid').innerHTML = githubProjects.map((project) => {
   const access = project.public ? '<span class="repo-access is-public">公開原始碼</span>' : '<span class="repo-access">私人專案摘要</span>';
@@ -120,18 +132,43 @@ const dialogContent = document.querySelector('#dialog-content');
 const audio = document.querySelector('#audio-player');
 let lastTrigger = null;
 
-function openProject(id, trigger) {
-  const item = cases[id];
-  if (!item) return;
-  if (trigger) lastTrigger = trigger;
-  audio.pause();
-  const previousVideo = dialog.querySelector('video');
-  if (previousVideo) previousVideo.pause();
-  document.querySelector('#dialog-type').textContent = item.category;
-  const sections = item.sections.map((section, index) => '<section><h3><span>0' + (index + 1) + '</span>' + escapeHtml(section[0]) + '</h3><p>' + escapeHtml(section[1]) + '</p></section>').join('');
+function renderCaseNavigation(id) {
+  const index = caseOrder.indexOf(id);
+  const previous = caseOrder[index - 1];
+  const next = caseOrder[index + 1];
+  const button = (target, direction, label) => target
+    ? '<button class="case-nav-button ' + direction + '" data-project="' + target + '" aria-label="' + label + '：' + escapeHtml(cases[target].title) + '"><small>' + label + '</small><span>' + escapeHtml(cases[target].title) + '</span></button>'
+    : '<span class="case-nav-end">' + (direction === 'previous' ? '第一個項目' : '最後一個項目') + '</span>';
+  return '<nav class="case-navigation" aria-label="瀏覽其他項目"><div class="case-position">' + String(index + 1).padStart(2, '0') + ' / ' + caseOrder.length + ' 個項目</div><div class="case-nav-grid">' + button(previous, 'previous', '← 上一個項目') + button(next, 'next', '下一個項目 →') + '</div></nav>';
+}
+
+function renderCaseDetail(item, detail, id) {
+  const features = detail.features.map(([title, text]) => '<article><h4>' + escapeHtml(title) + '</h4><p>' + escapeHtml(text) + '</p></article>').join('');
+  const workflow = detail.workflow.map(([title, text], index) => '<li><span class="case-step-number">0' + (index + 1) + '</span><div><h4>' + escapeHtml(title) + '</h4><p>' + escapeHtml(text) + '</p></div></li>').join('');
+  const evidence = (item.evidence || detail.evidence || []).map((file) => '<li>' + escapeHtml(file) + '</li>').join('');
+  const stack = detail.stack.map((name) => '<span>' + escapeHtml(name) + '</span>').join('');
+  const repository = item.repository ? '<p class="case-repository"><strong>程式庫</strong> ' + escapeHtml(item.repository.name) + ' · ' + (item.repository.public ? '公開原始碼' : '私人專案摘要') + '</p>' : '';
   const link = item.link ? '<a class="case-link" href="' + escapeHtml(item.link) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(item.linkText) + '<span aria-hidden="true">↗</span></a>' : '';
-  const source = item.repository ? '<div class="case-source"><p><span>GitHub</span><code>' + escapeHtml(item.repository.name) + '</code><span>' + (item.repository.public ? '公開程式庫' : '私人程式庫 · 只展示摘要') + '</span></p><details><summary>查看實作依據</summary><ul>' + item.evidence.map((file) => '<li><code>' + escapeHtml(file) + '</code></li>').join('') + '</ul><p>依據說明文件與實作整理，核對日期：2026-11-15。</p></details></div>' : '';
-  dialogContent.innerHTML = '<div class="case-header"><h2 id="dialog-title">' + escapeHtml(item.title) + '</h2><p>' + escapeHtml(item.subtitle) + '</p><span class="case-status">' + escapeHtml(item.status) + '</span></div><div class="case-media">' + item.media + '</div><div class="case-grid">' + sections + '</div><div class="case-bottom"><p class="case-limit">' + escapeHtml(item.limit) + '</p>' + source + link + '</div>';
+  const media = ['zefnba', 'ari', 'planet', 'sound'].includes(id) ? '<div class="case-media">' + item.media + '</div>' : '';
+  return '<div class="case-header"><p class="case-kicker">項目詳解</p><h2 id="dialog-title">' + escapeHtml(item.title) + '</h2><p>' + escapeHtml(item.subtitle) + '</p><span class="case-status">' + escapeHtml(item.status) + '</span><dl class="case-facts"><div><dt>使用情境</dt><dd>' + escapeHtml(detail.audience) + '</dd></div><div><dt>作品形式</dt><dd>' + escapeHtml(detail.format) + '</dd></div></dl></div>' + media +
+    '<div class="case-reading"><section class="case-origin"><h3>為甚麼做這個作品</h3><p>' + escapeHtml(item.sections[0][1]) + '</p></section>' +
+    '<section class="case-detail-section"><h3>' + escapeHtml(detail.featureHeading || '主要功能') + '</h3><div class="case-features">' + features + '</div></section>' +
+    '<section class="case-detail-section"><h3>由輸入到成果</h3><ol class="case-workflow">' + workflow + '</ol></section>' +
+    '<section class="case-example"><p class="case-kicker">' + escapeHtml(detail.example.label) + '</p><h3>' + escapeHtml(detail.example.title) + '</h3><p>' + escapeHtml(detail.example.input) + '</p><p>' + escapeHtml(detail.example.output) + '</p></section>' +
+    '<section class="case-detail-section"><h3>AI 與我的分工</h3><div class="case-collaboration"><div><span class="case-role">AI 協助 · ' + escapeHtml(detail.aiMode) + '</span><p>' + escapeHtml(detail.ai) + '</p></div><div><span class="case-role">我負責</span><p>' + escapeHtml(detail.human) + '</p></div></div></section>' +
+    '<section class="case-result"><h3>目前成果</h3><p>' + escapeHtml(detail.outcome) + '</p></section>' +
+    '<details class="case-technical"><summary>技術、資料來源與展示範圍</summary><div class="case-tech-tags">' + stack + '</div><p>' + escapeHtml(item.limit) + '</p>' + repository + '<h4>內容依據</h4><ul>' + evidence + '</ul><p class="case-source-note">依據項目文件、程式實作及既有作品整理（2026 年 11 月）。情境示例用於解釋流程；不代表真實個案或實際成效。功能介紹不等同本次重新驗收原服務。</p></details>' + link + '</div>' + renderCaseNavigation(id);
+}
+
+function openProject(id, trigger) {
+  if (!caseOrder.includes(id)) return;
+  const item = cases[id];
+  if (trigger) lastTrigger = trigger;
+  else if (!dialog.open) lastTrigger = document.querySelector('[data-project="' + id + '"]');
+  audio.pause();
+  dialog.querySelectorAll('video, audio').forEach((media) => media.pause());
+  document.querySelector('#dialog-type').textContent = item.category;
+  dialogContent.innerHTML = renderCaseDetail(item, projectDetails[id], id);
   if (!dialog.open) dialog.showModal();
   dialog.scrollTop = 0;
   document.body.classList.add('modal-open');
@@ -139,8 +176,9 @@ function openProject(id, trigger) {
   if (location.hash !== '#project-' + id) history.replaceState(null, '', '#project-' + id);
 }
 
-document.querySelectorAll('[data-project]').forEach((button) => {
-  button.addEventListener('click', () => openProject(button.dataset.project, button));
+document.addEventListener('click', (event) => {
+  const button = event.target.closest?.('[data-project]');
+  if (button) openProject(button.dataset.project, button.closest('#project-dialog') ? null : button);
 });
 document.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', (event) => {
@@ -149,12 +187,17 @@ dialog.addEventListener('click', (event) => {
   if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
 });
 dialog.addEventListener('close', () => {
-  const video = dialog.querySelector('video');
-  if (video) video.pause();
+  dialog.querySelectorAll('video, audio').forEach((media) => media.pause());
   document.body.classList.remove('modal-open');
-  if (location.hash.startsWith('#project-')) history.replaceState(null, '', '#work');
+  const section = lastTrigger?.closest('#sound-lab') ? '#sound-lab' : lastTrigger?.closest('#github-work') ? '#github-work' : '#work';
+  if (location.hash.startsWith('#project-')) history.replaceState(null, '', section);
   if (lastTrigger && !lastTrigger.closest('[hidden]')) lastTrigger.focus({preventScroll:true});
 });
+dialog.addEventListener('play', (event) => {
+  dialog.querySelectorAll('video, audio').forEach((media) => {
+    if (media !== event.target) media.pause();
+  });
+}, true);
 
 const cards = [...document.querySelectorAll('.project-card')];
 document.querySelectorAll('[data-filter]').forEach((button) => {
